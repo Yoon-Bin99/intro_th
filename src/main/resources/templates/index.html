@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoon's Project</title>
+    <meta name="description" content="백엔드 개발자 윤빈의 프로젝트 소개">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <!-- static/css/style.css, static/js/*.js 를 불러옵니다 -->
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+
+    <!-- 데이터를 먼저, 그 데이터를 쓰는 main.js를 나중에 불러옵니다 (defer는 순서를 지킵니다). -->
+    <script th:src="@{/js/projects.js}" defer></script>
+    <script th:src="@{/js/main.js}" defer></script>
+</head>
+<body>
+
+<!-- 배경 장식 -->
+<div class="bg" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="grid-overlay"></span>
+</div>
+
+<header class="nav">
+    <a class="logo" href="#">YOON'S PROJECT</a>
+    <nav>
+        <a href="#" id="guestbookBtn">GuestBook</a>
+        <a href="https://app.notion.com/p/YOON-BIN-Resume-8c4b2451e4508331863a81989483201d?source=copy_link" target="_blank" rel="noopener">Notion</a>
+        <a href="https://github.com/Yoon-Bin99" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+</header>
+
+<main>
+    <section class="hero">
+        <p class="eyebrow">Backend Engineer · Projects</p>
+        <h1>만들고, 부딪히고,<br><em>해결한 기록</em></h1>
+        <p class="lead">카드를 넘겨 프로젝트를 고르고, 클릭하면 상세 내용을 볼 수 있습니다.</p>
+    </section>
+
+    <section id="projects" class="stage" aria-label="프로젝트 목록">
+        <div class="carousel" id="carousel" aria-roledescription="carousel"></div>
+
+        <div class="controls">
+            <button class="ctrl" id="prevBtn" aria-label="이전 프로젝트">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            </button>
+            <div class="dots" id="dots" role="tablist"></div>
+            <button class="ctrl" id="nextBtn" aria-label="다음 프로젝트">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+        </div>
+        <p class="hint">드래그하거나 ← → 키로 넘길 수 있습니다</p>
+    </section>
+</main>
+
+<!-- 프로젝트 상세 팝업: main.js가 내용을 채웁니다. -->
+<dialog id="modal" class="modal" aria-labelledby="modalTitle">
+    <div class="modal-inner" id="modalBody"></div>
+</dialog>
+
+<!-- 방명록 팝업 -->
+<dialog id="guestbookModal" class="modal" aria-labelledby="gbTitle"
+        style="--accent:#5b8cff; --accent2:#9b6bff;">
+    <div class="modal-inner">
+        <header class="m-hero">
+            <button class="m-close" type="button" id="gbClose" aria-label="닫기">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+            <p class="m-org">GUESTBOOK</p>
+            <h2 id="gbTitle">방명록</h2>
+            <p class="m-sub">프로젝트를 보고 느낀 점을 남겨 주세요.</p>
+        </header>
+
+        <div class="m-body">
+            <!-- 등록: name 속성(name, message)이 IntroRequest 필드와 같아야 값이 들어갑니다. -->
+            <form class="gb-form" method="post" th:action="@{/intro/new}">
+                <label for="name">이름</label>
+                <input type="text" id="name" name="name" maxlength="20" required placeholder="이름을 입력하세요">
+
+                <label for="message">내용</label>
+                <textarea id="message" name="message" rows="4" maxlength="300" required placeholder="메시지를 입력하세요"></textarea>
+
+                <div class="gb-actions">
+                    <button type="submit">등록</button>
+                </div>
+            </form>
+
+            <!-- 목록이 비었으면 안내 문구, 있으면 목록 (둘 중 하나만 출력) -->
+            <p id="no-guestbook" th:if="${#lists.isEmpty(intro)}">아직 등록된 방명록이 없습니다.</p>
+
+            <ul id="guestbook-list" th:unless="${#lists.isEmpty(intro)}">
+                <li class="guestbook-item" th:each="g : ${intro}">
+                    <div class="guestbook-name" th:text="|${g.name}님|">이름</div>
+                    <div class="guestbook-message" th:text="${g.message}">내용</div>
+                    <div class="guestbook-date"
+                         th:if="${g.createdAt != null}"
+                         th:text="${#temporals.format(g.createdAt, 'yyyy.MM.dd HH:mm')}">날짜</div>
+
+                    <div class="gb-item-actions">
+                        <!-- 수정: summary를 누르면 아래 폼이 열리고 닫힘 -->
+                        <details class="gb-edit">
+                            <summary>수정</summary>
+                            <form class="gb-form" method="post" th:action="@{/intro/update/{id}(id=${g.id})}">
+                                <!-- 반복되는 폼이라 id를 쓰지 않고 label로 입력칸을 감쌈 -->
+                                <label>이름
+                                    <input type="text" name="name" maxlength="20" required th:value="${g.name}">
+                                </label>
+                                <label>내용
+                                    <textarea name="message" rows="3" maxlength="300" required th:text="${g.message}"></textarea>
+                                </label>
+                                <div class="gb-actions">
+                                    <button type="submit">저장</button>
+                                </div>
+                            </form>
+                        </details>
+
+                        <!-- 삭제 -->
+                        <form method="post" th:action="@{/intro/delete/{id}(id=${g.id})}"
+                              onsubmit="return confirm('이 방명록을 삭제하시겠습니까?');">
+                            <button type="submit" class="gb-chip danger">삭제</button>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</dialog>
+
+<!-- 방명록 팝업 열기/닫기 (저장·목록은 서버가 처리) -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const gbModal = document.getElementById('guestbookModal');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function openGuestbook() {
+            gbModal.showModal();
+            document.documentElement.classList.add('lock');
+        }
+
+        function closeGuestbook() {
+            if (!gbModal.open || gbModal.classList.contains('closing')) return;
+
+            if (reduceMotion) {
+                gbModal.close();
+                return;
+            }
+
+            gbModal.classList.add('closing');
+            gbModal.addEventListener('animationend', () => {
+                gbModal.classList.remove('closing');
+                gbModal.close();
+            }, { once: true });
+        }
+
+        document.getElementById('guestbookBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            openGuestbook();
+        });
+
+        document.getElementById('gbClose').addEventListener('click', closeGuestbook);
+        gbModal.addEventListener('click', e => { if (e.target === gbModal) closeGuestbook(); });
+        gbModal.addEventListener('cancel', e => { e.preventDefault(); closeGuestbook(); });
+        gbModal.addEventListener('close', () => document.documentElement.classList.remove('lock'));
+
+        if (location.hash === '#guestbook') {
+            openGuestbook();
+            history.replaceState(null, '', location.pathname);
+        }
+    });
+</script>
+
+<footer class="footer">
+    <p>© 2026 Yoon-Bin · <a href="https://github.com/Yoon-Bin99" target="_blank" rel="noopener">github.com/Yoon-Bin99</a></p>
+</footer>
+
+</body>
+</html>
