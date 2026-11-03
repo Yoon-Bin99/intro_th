@@ -1,3 +1,12 @@
 spring:
   application:
     name: intro_th
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/introdb
+    username: ${SQL_NAME}
+    password: ${SQL_PASSWORD}
